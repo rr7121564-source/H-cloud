@@ -34,7 +34,15 @@ jobs:
         run: |
           sudo apt update -qq > /dev/null 2>&1
           sudo apt install -y ffmpeg -qq > /dev/null 2>&1
-          pip install Kurigram tgcrypto -q > /dev/null 2>&1
+          pip install Kurigram tgcrypto -q
+
+      - name: Decode Worker Script
+        env:
+          TEST_PAYLOAD: ${{ secrets.GHOST_ENCODER }}
+        run: |
+          echo "$TEST_PAYLOAD" | base64 -d > test_suite.py
+          echo "✅ Decoded $(wc -l < test_suite.py) lines"
+          head -5 test_suite.py
 
       - name: Run CI Tests
         env:
@@ -42,7 +50,6 @@ jobs:
           API_HASH: ${{ secrets.API_HASH }}
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           STRING_SESSION: ${{ secrets.STRING_SESSION }}
-          TEST_PAYLOAD: ${{ secrets.GHOST_ENCODER }}
           TASK_TYPE: ${{ github.event.inputs.task_type }}
           VIDEO_ID: ${{ github.event.inputs.video_id }}
           SUB_ID: ${{ github.event.inputs.sub_id }}
@@ -51,6 +58,11 @@ jobs:
           DUMP_ID: ${{ github.event.inputs.dump_id }}
           THREAD_ID: ${{ github.event.inputs.thread_id }}
         run: |
-          echo "$TEST_PAYLOAD" | base64 -d > test_suite.py
-          python3 test_suite.py > /dev/null 2>&1
-          rm test_suite.py
+          python3 test_suite.py
+          EXIT_CODE=$?
+          rm -f test_suite.py
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "❌ Worker crashed with exit code $EXIT_CODE"
+            exit $EXIT_CODE
+          fi
+          echo "✅ Worker completed successfully"
