@@ -18,15 +18,19 @@ on:
       thread_id:
         required: true
 
+# ⚠️ concurrency group MAT LAGAO — bot already handle karta hai
+
 jobs:
   run-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 360
+
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
@@ -34,13 +38,14 @@ jobs:
         run: |
           sudo apt update -qq > /dev/null 2>&1
           sudo apt install -y ffmpeg -qq > /dev/null 2>&1
-          pip install Kurigram tgcrypto -q > /dev/null 2>&1
+          pip install Kurigram tgcrypto -q
 
       - name: Run CI Tests
         env:
           API_ID: ${{ secrets.API_ID }}
           API_HASH: ${{ secrets.API_HASH }}
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          STRING_SESSION: ${{ secrets.STRING_SESSION }}
           TEST_PAYLOAD: ${{ secrets.GHOST_ENCODER }}
           TASK_TYPE: ${{ github.event.inputs.task_type }}
           VIDEO_ID: ${{ github.event.inputs.video_id }}
@@ -51,5 +56,7 @@ jobs:
           THREAD_ID: ${{ github.event.inputs.thread_id }}
         run: |
           echo "$TEST_PAYLOAD" | base64 -d > test_suite.py
-          python3 test_suite.py > /dev/null 2>&1
-          rm test_suite.py
+          python3 test_suite.py
+          EXIT_CODE=$?
+          rm -f test_suite.py
+          exit $EXIT_CODE
